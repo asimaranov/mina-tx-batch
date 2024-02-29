@@ -7,6 +7,7 @@ import {
   SmartContract,
   state,
   State,
+  Provable,
 } from 'o1js';
 
 const MAX_AGENT_ID = 3000;
@@ -30,12 +31,9 @@ export class AgentMessageDetails extends Struct({
       this.agentId.add(this.xLoc).add(this.yLoc)
     );
 
-    assert(
-      this.agentId
-        .equals(0)
-        .or(check1.and(check2).and(check3).and(check4).and(check5).and(check6)),
-      'Conditions error'
-    );
+    return this.agentId
+      .equals(0)
+      .or(check1.and(check2).and(check3).and(check4).and(check5).and(check6));
   }
 }
 
@@ -47,7 +45,7 @@ export const TxBatchProgram = ZkProgram({
     processFirstMessage: {
       privateInputs: [AgentMessageDetails],
       method(messageNumber: Field, messageDetails: AgentMessageDetails) {
-        messageDetails.verify();
+        messageDetails.verify().assertTrue('Conditions error');
         return messageNumber;
       },
     },
@@ -58,12 +56,11 @@ export const TxBatchProgram = ZkProgram({
         messageDetails: AgentMessageDetails,
         earlierProof: SelfProof<Field, Field>
       ) {
-        earlierProof.verifyIf(
-          earlierProof.publicOutput.greaterThan(messageNumber)
-        );
-        messageDetails.verify();
+        earlierProof.verify();
 
-        return messageNumber;
+        messageNumber.greaterThan(earlierProof.publicInput).or(messageDetails.verify());
+
+        return Provable.if(messageNumber.greaterThan(earlierProof.publicInput), messageNumber, earlierProof.publicInput);
       },
     },
   },
