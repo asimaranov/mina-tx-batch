@@ -58,7 +58,7 @@ export const TxBatchProgram = ZkProgram({
       ) {
         earlierProof.verify();
 
-        messageNumber.greaterThan(earlierProof.publicInput).or(messageDetails.verify());
+        messageNumber.greaterThan(earlierProof.publicInput).or(messageDetails.verify()).assertTrue('Conditions error');
 
         return Provable.if(messageNumber.greaterThan(earlierProof.publicInput), messageNumber, earlierProof.publicInput);
       },
